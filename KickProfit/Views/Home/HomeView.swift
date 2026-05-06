@@ -22,7 +22,8 @@ struct HomeView: View {
     private var currentGoal: Goal? {
         goals.first { $0.monthYear == Goal.monthYearKey() }
     }
-    private var recentFlips: [Flip] { Array(allFlips.prefix(5)) }
+    private var recentFlips: [Flip] { Array(allFlips.filter { $0.status == .sold }.prefix(5)) }
+    private var inventoryFlips: [Flip] { allFlips.filter { $0.status == .listed }.sorted { $0.createdAt < $1.createdAt } }
 
     private var greeting: String {
         let h = Calendar.current.component(.hour, from: Date())
@@ -46,9 +47,12 @@ struct HomeView: View {
                     if allFlips.contains(where: { $0.status == .sold }) {
                         PaceCard(snapshot: monthSnapshot, goal: currentGoal)
                     }
+                    if !inventoryFlips.isEmpty {
+                        inventorySection
+                    }
                     if !recentFlips.isEmpty {
                         recentSection
-                    } else {
+                    } else if inventoryFlips.isEmpty {
                         emptyState
                     }
                 }
@@ -108,6 +112,24 @@ struct HomeView: View {
                 .padding(.leading, 2)
             ForEach(recentFlips) { flip in
                 RecentFlipRow(flip: flip)
+            }
+        }
+    }
+
+    private var inventorySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("In Stock")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(inventoryFlips.count) pair\(inventoryFlips.count == 1 ? "" : "s")")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.leading, 2)
+            ForEach(inventoryFlips) { flip in
+                InventoryRow(flip: flip)
             }
         }
     }
