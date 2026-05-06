@@ -1,0 +1,14 @@
+# Xcode generated — never commit
+*.xcodeproj/
+xcuserdata/
+*.xcworkspace/
+DerivedData/
+*.xccheckout
+*.moved-aside
+*.pbxuser
+
+# macOS
+.DS_Store
+
+# Build
+build/
