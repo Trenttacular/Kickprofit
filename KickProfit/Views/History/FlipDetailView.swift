@@ -311,6 +311,10 @@ struct FlipEditSheet: View {
                     }
                 }
                 .scrollContentBackground(.hidden)
+                .onChange(of: flip.sizeCategoryRaw) {
+                    let cat = flip.sizeCategory
+                    flip.sizeUS = min(max(flip.sizeUS, cat.sizeMin), cat.sizeMax)
+                }
             }
             .navigationTitle("Edit")
             .navigationBarTitleDisplayMode(.inline)

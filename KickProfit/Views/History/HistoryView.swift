@@ -163,9 +163,9 @@ struct HistoryView: View {
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 4) {
-                Text(flip.profit.asCurrency)
+                Text(flip.cashFlowValue.asSignedCurrency)
                     .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundStyle(flip.profit >= 0 ? Color.kickGreen : Color.kickDanger)
+                    .foregroundStyle(flip.cashFlowValue >= 0 ? Color.kickGreen : Color.kickDanger)
                 Text(flip.status.rawValue)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(flip.status.color)

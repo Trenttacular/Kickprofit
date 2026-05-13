@@ -3,13 +3,13 @@ import Foundation
 struct ShoeDatabase {
 
     struct ShoeModel: Identifiable {
-        let id = UUID()
+        var id: String { name }
         let name: String
         let popularColorways: [String]
     }
 
     struct Brand: Identifiable {
-        let id = UUID()
+        var id: String { name }
         let name: String
         let models: [ShoeModel]
     }

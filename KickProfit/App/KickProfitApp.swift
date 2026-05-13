@@ -8,7 +8,11 @@ struct KickProfitApp: App {
     let modelContainer: ModelContainer = {
         let schema = Schema([Flip.self, Goal.self])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-        return try! ModelContainer(for: schema, configurations: [config])
+        do {
+            return try ModelContainer(for: schema, configurations: [config])
+        } catch {
+            fatalError("KickProfit: SwiftData failed to initialize — \(error.localizedDescription)")
+        }
     }()
 
     var body: some Scene {

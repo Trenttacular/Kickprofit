@@ -30,9 +30,9 @@ struct RecentFlipRow: View {
 
             VStack(alignment: .trailing, spacing: 3) {
                 // Show sale price as positive (money received)
-                Text(flip.salePrice.asSignedCurrency)
+                Text(flip.salePrice > 0 ? flip.salePrice.asSignedCurrency : "$0")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.kickGreen)
+                    .foregroundStyle(flip.salePrice > 0 ? Color.kickGreen : Color.kickDanger)
                 statusBadge
             }
         }

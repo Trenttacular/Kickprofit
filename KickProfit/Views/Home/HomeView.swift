@@ -29,14 +29,16 @@ struct HomeView: View {
         allFlips.filter { $0.status == .listed }.sorted { $0.createdAt < $1.createdAt }
     }
 
-    // Net cash flow: sold revenue minus inventory cost
+    // Net cash flow: sold revenue minus inventory cost (uses Flip.cashFlowValue)
+    private var netValue: Double {
+        allFlips.reduce(0) { $0 + $1.cashFlowValue }
+    }
     private var listedTotal: Double {
         allFlips.filter { $0.status == .listed }.map(\.purchasePrice).reduce(0, +)
     }
     private var soldTotal: Double {
         allFlips.filter { $0.status == .sold }.map(\.salePrice).reduce(0, +)
     }
-    private var netValue: Double { soldTotal - listedTotal }
 
     private var greeting: String {
         let h = Calendar.current.component(.hour, from: Date())
@@ -119,7 +121,7 @@ struct HomeView: View {
                     Text("In Stock")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
-                    Text((-listedTotal).asCurrency)
+                    Text(listedTotal > 0 ? "-\(listedTotal.asCurrency)" : "$0")
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                         .foregroundStyle(listedTotal > 0 ? Color.kickDanger : .secondary)
                 }
@@ -128,7 +130,7 @@ struct HomeView: View {
                     Text("Sold Revenue")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
-                    Text(soldTotal > 0 ? "+\(soldTotal.asCurrency)" : soldTotal.asCurrency)
+                    Text(soldTotal > 0 ? soldTotal.asSignedCurrency : "$0")
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                         .foregroundStyle(soldTotal > 0 ? Color.kickGreen : .secondary)
                 }
