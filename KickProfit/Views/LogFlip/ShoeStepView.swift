@@ -5,19 +5,14 @@ struct ShoeStepView: View {
     @Binding var name: String
     @Binding var colorway: String
     @Binding var sizeUS: Double
+    @Binding var sizeCategory: SizeCategory
     @Binding var condition: FlipCondition
     let onNext: () -> Void
 
     @State private var showBrandPicker = false
 
-    private let popularBrands = [
-        "Nike","Jordan","Adidas","New Balance","Yeezy","Puma",
-        "Reebok","Saucony","Converse","Vans","ASICS","On Running",
-        "Salehe Bembury","New Balance Collab","Travis Scott","Off-White",
-        "Fear of God","Union","Concepts","Kith","Supreme","Virgil Abloh",
-        "Air Max","Dunk","Air Force 1","Other",
-    ]
-
+    private var quickModels: [ShoeDatabase.ShoeModel] { ShoeDatabase.models(for: brand) }
+    private var quickColorways: [String] { ShoeDatabase.colorways(for: brand, model: name) }
     private var canProceed: Bool { !brand.isEmpty && !name.isEmpty }
 
     var body: some View {
@@ -29,9 +24,7 @@ struct ShoeStepView: View {
                     // Brand
                     VStack(alignment: .leading, spacing: 8) {
                         fieldLabel("Brand")
-                        Button {
-                            showBrandPicker = true
-                        } label: {
+                        Button { showBrandPicker = true } label: {
                             HStack {
                                 Text(brand.isEmpty ? "Select brand" : brand)
                                     .foregroundStyle(brand.isEmpty ? .secondary : .primary)
@@ -46,6 +39,36 @@ struct ShoeStepView: View {
                         .buttonStyle(PressAnimationStyle())
                     }
 
+                    // Model quick-picks (shown after brand is selected)
+                    if !brand.isEmpty && !quickModels.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            fieldLabel("Quick Pick Model")
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(quickModels) { model in
+                                        Button {
+                                            name = model.name
+                                            colorway = ""
+                                        } label: {
+                                            Text(model.name)
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundStyle(name == model.name ? .black : .primary)
+                                                .lineLimit(1)
+                                                .padding(.horizontal, 12)
+                                                .padding(.vertical, 8)
+                                                .background(
+                                                    name == model.name ? Color.kickAccent : Color.kickSurfaceSecondary,
+                                                    in: RoundedRectangle(cornerRadius: 8)
+                                                )
+                                        }
+                                        .buttonStyle(PressAnimationStyle())
+                                    }
+                                }
+                                .padding(.horizontal, 2)
+                            }
+                        }
+                    }
+
                     // Name
                     VStack(alignment: .leading, spacing: 8) {
                         fieldLabel("Shoe Name")
@@ -53,11 +76,67 @@ struct ShoeStepView: View {
                             .textFieldStyle(KickTextFieldStyle())
                     }
 
-                    // Colorway
+                    // Colorway quick-picks (shown after name is filled)
+                    if !quickColorways.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            fieldLabel("Popular Colorways")
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(quickColorways, id: \.self) { cw in
+                                        Button {
+                                            colorway = cw
+                                        } label: {
+                                            Text(cw)
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundStyle(colorway == cw ? .black : .primary)
+                                                .lineLimit(1)
+                                                .padding(.horizontal, 12)
+                                                .padding(.vertical, 8)
+                                                .background(
+                                                    colorway == cw ? Color.kickAccent : Color.kickSurfaceSecondary,
+                                                    in: RoundedRectangle(cornerRadius: 8)
+                                                )
+                                        }
+                                        .buttonStyle(PressAnimationStyle())
+                                    }
+                                }
+                                .padding(.horizontal, 2)
+                            }
+                        }
+                    }
+
+                    // Colorway text field
                     VStack(alignment: .leading, spacing: 8) {
                         fieldLabel("Colorway (optional)")
                         TextField("e.g. Chicago", text: $colorway)
                             .textFieldStyle(KickTextFieldStyle())
+                    }
+
+                    // Size Category
+                    VStack(alignment: .leading, spacing: 8) {
+                        fieldLabel("Size Category")
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(SizeCategory.allCases) { cat in
+                                    Button {
+                                        sizeCategory = cat
+                                        sizeUS = cat.defaultSize
+                                    } label: {
+                                        Text(cat.rawValue)
+                                            .font(.system(size: 13, weight: .semibold))
+                                            .foregroundStyle(sizeCategory == cat ? .black : .primary)
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 10)
+                                            .background(
+                                                sizeCategory == cat ? Color.kickAccent : Color.kickSurfaceSecondary,
+                                                in: RoundedRectangle(cornerRadius: 10)
+                                            )
+                                    }
+                                    .buttonStyle(PressAnimationStyle())
+                                }
+                            }
+                            .padding(.horizontal, 2)
+                        }
                     }
 
                     // Size
@@ -65,7 +144,7 @@ struct ShoeStepView: View {
                         fieldLabel("US Size")
                         HStack(spacing: 16) {
                             Button {
-                                if sizeUS > 5 { sizeUS -= 0.5 }
+                                if sizeUS > sizeCategory.sizeMin { sizeUS -= 0.5 }
                             } label: {
                                 Image(systemName: "minus.circle.fill")
                                     .font(.system(size: 28))
@@ -80,7 +159,7 @@ struct ShoeStepView: View {
                                 .frame(minWidth: 60)
 
                             Button {
-                                if sizeUS < 18 { sizeUS += 0.5 }
+                                if sizeUS < sizeCategory.sizeMax { sizeUS += 0.5 }
                             } label: {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.system(size: 28))
@@ -166,20 +245,20 @@ struct ShoeStepView: View {
 
 // MARK: - Brand Picker
 
-private struct BrandPickerSheet: View {
+struct BrandPickerSheet: View {
     @Binding var selected: String
     @Environment(\.dismiss) private var dismiss
 
-    private let brands = [
-        "Nike","Jordan","Adidas","New Balance","Yeezy","Puma",
-        "Reebok","Saucony","Converse","Vans","ASICS","On Running",
-        "Salehe Bembury","Travis Scott","Off-White","Fear of God",
-        "Union","Concepts","Kith","Supreme","Other",
-    ]
+    @State private var search = ""
+
+    private var filtered: [String] {
+        if search.isEmpty { return ShoeDatabase.brandNames }
+        return ShoeDatabase.brandNames.filter { $0.localizedCaseInsensitiveContains(search) }
+    }
 
     var body: some View {
         NavigationStack {
-            List(brands, id: \.self) { brand in
+            List(filtered, id: \.self) { brand in
                 Button {
                     selected = brand
                     dismiss()
@@ -198,6 +277,7 @@ private struct BrandPickerSheet: View {
             .listStyle(.plain)
             .navigationTitle("Select Brand")
             .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $search, prompt: "Search brands")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

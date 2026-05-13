@@ -32,6 +32,10 @@ extension Double {
     var asROI: String {
         String(format: "%+.0f%%", self * 100)
     }
+    var asSignedCurrency: String {
+        let magnitude = abs(self).formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        return self >= 0 ? "+\(magnitude)" : "-\(magnitude)"
+    }
 }
 
 // MARK: - Card Modifier

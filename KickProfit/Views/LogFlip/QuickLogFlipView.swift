@@ -12,6 +12,7 @@ struct QuickLogFlipView: View {
     @State private var name: String = ""
     @State private var colorway: String = ""
     @State private var sizeUS: Double = 10.0
+    @State private var sizeCategory: SizeCategory = .mens
     @State private var condition: FlipCondition = .deadstock
 
     // Step 1 — Pricing
@@ -27,7 +28,6 @@ struct QuickLogFlipView: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
             } else {
                 VStack(spacing: 0) {
-                    // Drag indicator
                     Capsule()
                         .fill(Color.white.opacity(0.2))
                         .frame(width: 36, height: 4)
@@ -66,7 +66,7 @@ struct QuickLogFlipView: View {
         case 0:
             ShoeStepView(
                 brand: $brand, name: $name, colorway: $colorway,
-                sizeUS: $sizeUS, condition: $condition
+                sizeUS: $sizeUS, sizeCategory: $sizeCategory, condition: $condition
             ) {
                 withAnimation(.spring(response: 0.35)) { currentStep = 1 }
             }
@@ -80,7 +80,7 @@ struct QuickLogFlipView: View {
         default:
             ReviewSaveView(
                 brand: brand, name: name, colorway: colorway,
-                sizeUS: sizeUS, condition: condition,
+                sizeUS: sizeUS, sizeCategory: sizeCategory, condition: condition,
                 purchasePrice: Double(purchasePrice) ?? 0,
                 salePrice: Double(salePrice) ?? 0,
                 onSaved: { flip in
@@ -104,11 +104,11 @@ struct QuickLogFlipView: View {
                         Circle()
                             .fill(Color.kickGreen.opacity(0.15))
                             .frame(width: 80, height: 80)
-                        Image(systemName: "checkmark.circle.fill")
+                        Image(systemName: flip.status == .listed ? "tag.fill" : "checkmark.circle.fill")
                             .font(.system(size: 52))
-                            .foregroundStyle(Color.kickGreen)
+                            .foregroundStyle(flip.status == .listed ? Color.kickAccent : Color.kickGreen)
                     }
-                    Text("Flip Logged!")
+                    Text(flip.status == .listed ? "Shoe Listed!" : "Flip Logged!")
                         .font(.system(size: 28, weight: .bold))
                     Text(flip.displayName)
                         .font(.system(size: 16))
@@ -129,7 +129,7 @@ struct QuickLogFlipView: View {
                         resetForm()
                         withAnimation { showSuccess = false }
                     } label: {
-                        Text("Log Another Flip")
+                        Text("Add Another")
                             .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 15)
@@ -156,7 +156,7 @@ struct QuickLogFlipView: View {
     private func resetForm() {
         currentStep = 0
         brand = ""; name = ""; colorway = ""
-        sizeUS = 10.0; condition = .deadstock
+        sizeUS = 10.0; sizeCategory = .mens; condition = .deadstock
         purchasePrice = ""; salePrice = ""
         savedFlip = nil
     }

@@ -22,8 +22,21 @@ struct HomeView: View {
     private var currentGoal: Goal? {
         goals.first { $0.monthYear == Goal.monthYearKey() }
     }
-    private var recentFlips: [Flip] { Array(allFlips.filter { $0.status == .sold }.prefix(5)) }
-    private var inventoryFlips: [Flip] { allFlips.filter { $0.status == .listed }.sorted { $0.createdAt < $1.createdAt } }
+    private var recentFlips: [Flip] {
+        Array(allFlips.filter { $0.status == .sold }.prefix(5))
+    }
+    private var inventoryFlips: [Flip] {
+        allFlips.filter { $0.status == .listed }.sorted { $0.createdAt < $1.createdAt }
+    }
+
+    // Net cash flow: sold revenue minus inventory cost
+    private var listedTotal: Double {
+        allFlips.filter { $0.status == .listed }.map(\.purchasePrice).reduce(0, +)
+    }
+    private var soldTotal: Double {
+        allFlips.filter { $0.status == .sold }.map(\.salePrice).reduce(0, +)
+    }
+    private var netValue: Double { soldTotal - listedTotal }
 
     private var greeting: String {
         let h = Calendar.current.component(.hour, from: Date())
@@ -38,6 +51,9 @@ struct HomeView: View {
             ScrollView {
                 VStack(spacing: 14) {
                     header
+                    if !allFlips.isEmpty {
+                        netGainLossCard
+                    }
                     HeroProfitCard(
                         snapshot: monthSnapshot,
                         lastMonthSnapshot: lastMonthSnapshot,
@@ -78,6 +94,47 @@ struct HomeView: View {
                 .foregroundStyle(Color.kickAccent)
         }
         .padding(.top, 8)
+    }
+
+    private var netGainLossCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Net Gain / Loss")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("All Time")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+            }
+
+            Text(netValue.asSignedCurrency)
+                .font(.system(size: 36, weight: .bold, design: .rounded))
+                .foregroundStyle(netValue >= 0 ? Color.kickGreen : Color.kickDanger)
+                .contentTransition(.numericText())
+                .animation(.spring(response: 0.4), value: netValue)
+
+            HStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("In Stock")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    Text((-listedTotal).asCurrency)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(listedTotal > 0 ? Color.kickDanger : .secondary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("Sold Revenue")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    Text(soldTotal > 0 ? "+\(soldTotal.asCurrency)" : soldTotal.asCurrency)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(soldTotal > 0 ? Color.kickGreen : .secondary)
+                }
+            }
+        }
+        .kickCard()
     }
 
     private var miniStats: some View {
@@ -142,11 +199,11 @@ struct HomeView: View {
             Text("No flips logged yet")
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(.secondary)
-            Text("Tap + to log your first flip")
+            Text("Tap + to list your first shoe")
                 .font(.system(size: 14))
                 .foregroundStyle(.tertiary)
             Button(action: onLogFlip) {
-                Text("Log a Flip")
+                Text("Add a Shoe")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.black)
                     .padding(.horizontal, 24)

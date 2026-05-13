@@ -64,6 +64,8 @@ struct FlipDetailView: View {
                         Text(flip.colorway).foregroundStyle(.secondary)
                         Text("·").foregroundStyle(.secondary)
                     }
+                    Text(flip.sizeCategory.rawValue).foregroundStyle(.secondary)
+                    Text("·").foregroundStyle(.secondary)
                     Text("Sz \(flip.sizeUS.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", flip.sizeUS) : String(format: "%.1f", flip.sizeUS))")
                         .foregroundStyle(.secondary)
                     Text("·").foregroundStyle(.secondary)
@@ -96,7 +98,13 @@ struct FlipDetailView: View {
             Divider().background(Color.white.opacity(0.06))
             row("Brand", value: flip.brand)
             Divider().background(Color.white.opacity(0.06))
+            row("Size Category", value: flip.sizeCategory.rawValue)
+            Divider().background(Color.white.opacity(0.06))
             row("Condition", value: flip.condition.rawValue)
+            if flip.status == .sold {
+                Divider().background(Color.white.opacity(0.06))
+                row("Profit", value: flip.profit.asSignedCurrency)
+            }
         }
         .kickCard()
     }
@@ -129,21 +137,144 @@ struct FlipDetailView: View {
     }
 }
 
-// MARK: - Edit Sheet
+// MARK: - Edit Sheet (internal so InventoryRow can use it)
 
-private struct FlipEditSheet: View {
+struct FlipEditSheet: View {
     @Bindable var flip: Flip
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
     @State private var purchaseStr: String = ""
     @State private var saleStr: String = ""
+    @State private var showBrandPicker = false
+
+    private var quickModels: [ShoeDatabase.ShoeModel] { ShoeDatabase.models(for: flip.brand) }
+    private var quickColorways: [String] { ShoeDatabase.colorways(for: flip.brand, model: flip.name) }
 
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.kickBackground.ignoresSafeArea()
                 Form {
+                    // Shoe Info
+                    Section("Shoe Info") {
+                        Button {
+                            showBrandPicker = true
+                        } label: {
+                            HStack {
+                                Text("Brand")
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Text(flip.brand.isEmpty ? "Select" : flip.brand)
+                                    .foregroundStyle(.secondary)
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        // Model quick-picks
+                        if !flip.brand.isEmpty && !quickModels.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Quick Pick Model")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.secondary)
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 6) {
+                                        ForEach(quickModels) { m in
+                                            Button {
+                                                flip.name = m.name
+                                                flip.colorway = ""
+                                            } label: {
+                                                Text(m.name)
+                                                    .font(.system(size: 11, weight: .medium))
+                                                    .foregroundStyle(flip.name == m.name ? .black : .primary)
+                                                    .lineLimit(1)
+                                                    .padding(.horizontal, 10)
+                                                    .padding(.vertical, 6)
+                                                    .background(
+                                                        flip.name == m.name ? Color.kickAccent : Color.kickSurfaceSecondary,
+                                                        in: RoundedRectangle(cornerRadius: 6)
+                                                    )
+                                            }
+                                            .buttonStyle(PressAnimationStyle())
+                                        }
+                                    }
+                                }
+                            }
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        }
+
+                        LabeledContent("Model") {
+                            TextField("Shoe name", text: $flip.name)
+                                .multilineTextAlignment(.trailing)
+                        }
+
+                        // Colorway quick-picks
+                        if !quickColorways.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Popular Colorways")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.secondary)
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 6) {
+                                        ForEach(quickColorways, id: \.self) { cw in
+                                            Button {
+                                                flip.colorway = cw
+                                            } label: {
+                                                Text(cw)
+                                                    .font(.system(size: 11, weight: .medium))
+                                                    .foregroundStyle(flip.colorway == cw ? .black : .primary)
+                                                    .lineLimit(1)
+                                                    .padding(.horizontal, 10)
+                                                    .padding(.vertical, 6)
+                                                    .background(
+                                                        flip.colorway == cw ? Color.kickAccent : Color.kickSurfaceSecondary,
+                                                        in: RoundedRectangle(cornerRadius: 6)
+                                                    )
+                                            }
+                                            .buttonStyle(PressAnimationStyle())
+                                        }
+                                    }
+                                }
+                            }
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        }
+
+                        LabeledContent("Colorway") {
+                            TextField("Optional", text: $flip.colorway)
+                                .multilineTextAlignment(.trailing)
+                        }
+
+                        Picker("Size Category", selection: $flip.sizeCategoryRaw) {
+                            ForEach(SizeCategory.allCases) { cat in
+                                Text(cat.rawValue).tag(cat.rawValue)
+                            }
+                        }
+
+                        HStack {
+                            Text("US Size")
+                            Spacer()
+                            Stepper(
+                                value: $flip.sizeUS,
+                                in: flip.sizeCategory.sizeMin...flip.sizeCategory.sizeMax,
+                                step: 0.5
+                            ) {
+                                Text(flip.sizeUS.truncatingRemainder(dividingBy: 1) == 0
+                                     ? String(format: "%.0f", flip.sizeUS)
+                                     : String(format: "%.1f", flip.sizeUS))
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .multilineTextAlignment(.trailing)
+                            }
+                        }
+
+                        Picker("Condition", selection: $flip.conditionRaw) {
+                            ForEach(FlipCondition.allCases) { c in
+                                Text(c.rawValue).tag(c.rawValue)
+                            }
+                        }
+                    }
+
                     Section("Pricing") {
                         HStack {
                             Text("Buy Price")
@@ -160,6 +291,7 @@ private struct FlipEditSheet: View {
                                 .multilineTextAlignment(.trailing)
                         }
                     }
+
                     Section("Status") {
                         Picker("Status", selection: $flip.statusRaw) {
                             ForEach(FlipStatus.allCases) { s in
@@ -168,20 +300,24 @@ private struct FlipEditSheet: View {
                         }
                         .pickerStyle(.segmented)
                     }
+
                     Section("Date") {
                         DatePicker("Flip Date", selection: $flip.flipDate, displayedComponents: .date)
                     }
+
                     Section("Notes") {
-                        TextField("Notes...", text: $flip.notes, axis: .vertical)
+                        TextField("Platform, buyer, anything...", text: $flip.notes, axis: .vertical)
                             .lineLimit(3...6)
                     }
                 }
                 .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Edit Flip")
+            .navigationTitle("Edit")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         if let p = Double(purchaseStr) { flip.purchasePrice = p }
@@ -195,6 +331,9 @@ private struct FlipEditSheet: View {
             .onAppear {
                 purchaseStr = String(Int(flip.purchasePrice))
                 saleStr = String(Int(flip.salePrice))
+            }
+            .sheet(isPresented: $showBrandPicker) {
+                BrandPickerSheet(selected: $flip.brand)
             }
         }
         .preferredColorScheme(.dark)

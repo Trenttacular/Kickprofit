@@ -6,6 +6,7 @@ struct ReviewSaveView: View {
     let name: String
     let colorway: String
     let sizeUS: Double
+    let sizeCategory: SizeCategory
     let condition: FlipCondition
     let purchasePrice: Double
     let salePrice: Double
@@ -14,7 +15,7 @@ struct ReviewSaveView: View {
 
     @Environment(\.modelContext) private var modelContext
 
-    @State private var status: FlipStatus = .sold
+    @State private var status: FlipStatus = .listed
     @State private var flipDate: Date = Date()
     @State private var notes: String = ""
     @State private var isSaving = false
@@ -59,7 +60,7 @@ struct ReviewSaveView: View {
 
                     // Date
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Flip Date")
+                        Text("Date")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.secondary)
                         DatePicker("", selection: $flipDate, displayedComponents: .date)
@@ -103,19 +104,21 @@ struct ReviewSaveView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(brand) \(name)")
                     .font(.system(size: 17, weight: .bold))
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     if !colorway.isEmpty {
                         Text(colorway)
                             .font(.system(size: 13))
                             .foregroundStyle(.secondary)
-                        Text("·")
-                            .foregroundStyle(.secondary)
+                        Text("·").foregroundStyle(.secondary)
                     }
+                    Text(sizeCategory.rawValue)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                    Text("·").foregroundStyle(.secondary)
                     Text("Sz \(sizeUS.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", sizeUS) : String(format: "%.1f", sizeUS))")
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
-                    Text("·")
-                        .foregroundStyle(.secondary)
+                    Text("·").foregroundStyle(.secondary)
                     Text(condition.rawValue)
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
@@ -137,13 +140,11 @@ struct ReviewSaveView: View {
             }
             .buttonStyle(PressAnimationStyle())
 
-            Button {
-                saveFlip()
-            } label: {
+            Button { saveFlip() } label: {
                 if isSaving {
                     ProgressView().tint(.black)
                 } else {
-                    Text("Save Flip")
+                    Text(status == .listed ? "Add to Inventory" : "Save Flip")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(.black)
                 }
@@ -166,6 +167,7 @@ struct ReviewSaveView: View {
         flip.name = name
         flip.colorway = colorway
         flip.sizeUS = sizeUS
+        flip.sizeCategoryRaw = sizeCategory.rawValue
         flip.conditionRaw = condition.rawValue
         flip.purchasePrice = purchasePrice
         flip.salePrice = salePrice

@@ -15,6 +15,11 @@ struct RecentFlipRow: View {
                         .foregroundStyle(.secondary)
                     Text("·")
                         .foregroundStyle(.secondary)
+                    Text(flip.sizeCategory.rawValue)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    Text("·")
+                        .foregroundStyle(.secondary)
                     Text("Sz \(flip.sizeUS, format: .number.precision(.fractionLength(flip.sizeUS.truncatingRemainder(dividingBy: 1) == 0 ? 0 : 1)))")
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
@@ -24,9 +29,10 @@ struct RecentFlipRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 3) {
-                Text(flip.profit.asCurrency)
+                // Show sale price as positive (money received)
+                Text(flip.salePrice.asSignedCurrency)
                     .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundStyle(flip.profit >= 0 ? Color.kickGreen : Color.kickDanger)
+                    .foregroundStyle(Color.kickGreen)
                 statusBadge
             }
         }
